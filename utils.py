@@ -21,7 +21,7 @@ class Logger(object):
         'crit':logging.CRITICAL
     }#日志级别关系映射
 
-    def __init__(self,filename, when='d', backCount=3):
+    def __init__(self,filename, when='d', backCount=5):
         self.logger = logging.getLogger(filename)
         self.logger.setLevel(logging.INFO)#设置日志级别
         console_handler = logging.StreamHandler(sys.stdout)#往屏幕上输出

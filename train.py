@@ -8,13 +8,17 @@ import numpy as np
 from config import DATASET_PARAMETERS, NETWORKS_PARAMETERS, SYSTEM_PARAMTES
 from torch.utils.data import DataLoader
 from parse_dataset import get_dataset_voice
-from network import VoiceEmbedNet
+
+from network import VoiceEmbedNet2
 from utils import Meter, cycle, save_model, get_collate_fn,Logger
 from dataset import VoiceDataset
+
 from tensorboardX import SummaryWriter
+from torchsummary import summary
+
 
 print('Parsing your dataset...')
-voice_list, id_class_num = get_dataset_voice("new_train.csv")
+voice_list, id_class_num = get_dataset_voice("./dataset/new_train.csv")
 voice_dataset = VoiceDataset(voice_list,DATASET_PARAMETERS['nframe_range'])
 
 print('Preparing the dataloaders...')
@@ -27,21 +31,28 @@ voice_loader = DataLoader(voice_dataset, shuffle=True, drop_last=True,
 
 #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 voice_iterator = iter(cycle(voice_loader))
-model = VoiceEmbedNet(64, [256, 384, 576, 864],64,1251)
+model = VoiceEmbedNet2(64, [256, 384, 576, 864],64,1251)
+# summary(model, (64,700))
+
 #设置冻结层
 for param in model.parameters():
     param.requires_grad = True
 for param in model.model.parameters():
     param.requires_grad = False
 
-opitmizer = torch.optim.SGD(filter(lambda p: p.requires_grad, model.parameters()),lr=0.005,momentum=0.9)
-model.load_state_dict(torch.load(SYSTEM_PARAMTES['VE_model_dir']), strict=False)
-log = Logger(SYSTEM_PARAMTES['log_dir']).logger
+opitmizer = torch.optim.SGD(filter(lambda p: p.requires_grad, model.parameters()),lr=0.0003,momentum=0.9)
+#model.load_state_dict(torch.load(SYSTEM_PARAMTES['VE_model_dir']), strict=False)
+
+
+log_dir ="./log/{0}_wav_class.log".format(time.strftime("%m_%d_%H_%M"))
+log = Logger(log_dir).logger
 writer = SummaryWriter()
+
+print('Training models...')
 if NETWORKS_PARAMETERS['GPU']:
     model.cuda()
-print('Training models...')
 model.train()
+
 for it in range(50001):
     voice, voice_label = next(voice_iterator)
     if NETWORKS_PARAMETERS['GPU']: 
@@ -57,8 +68,9 @@ for it in range(50001):
     
     log.info(log_msg)
 
-    if it%10000 == 0:
-        torch.save(model.state_dict(), str(it)+'params.pth')
+    if it % 10000 == 0 and it > 0:
+        s_time = time.strftime("%Y-%m-%d,%H:%M")
+        torch.save(model.state_dict(), s_time+'-'+str(it)+'-params.pth')
     
     opitmizer.zero_grad()
     loss.backward()

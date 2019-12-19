@@ -1,7 +1,10 @@
 ##############################
-## Folders                  ##
-##############################
+## Folders ##
 lstm-models/
 pretrained_models/
+runs/
+
+## files ##
 *.pth
+*.log
 
